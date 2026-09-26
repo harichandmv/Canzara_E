@@ -79,6 +79,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
       </div>
       <button class="tog" id="t-labels" aria-pressed="true">Labels</button>
       <button class="tog" id="t-half" aria-pressed="false">Low walls</button>
+      <button class="tog" id="t-roof" aria-pressed="false">Ceiling</button>
     </div>
   </header>
 
@@ -109,12 +110,13 @@ const ROOMS = [
   {id:'living', name:'Living',        dims:'330 × 360', r:[450,755,780,1110], f:'tile', chip:true},
   {id:'dining', name:'Dining',        dims:'300 × 310', r:[350,450,650,755],  f:'tile', chip:true},
   {id:'kitchen',name:'Kitchen',       dims:'290 × 350', r:[160,755,450,1110], f:'tile', chip:true},
-  {id:'mbed',   name:'Master bed',    dims:'430 × 300', r:[350,0,780,300],    f:'wood', chip:true},
-  {id:'bed2',   name:'Bed room 2',    dims:'350 × 310', r:[0,450,350,755],    f:'wood', chip:true},
-  {id:'bed3',   name:'Bed room 3',    dims:'350 × 300', r:[0,0,350,300],      f:'wood', chip:true},
+  {id:'mbed',   name:'Master bed',    dims:'430 × 300', r:[350,0,780,300],    f:'tile', chip:true},
+  {id:'bed2',   name:'Bed room 2',    dims:'350 × 310', r:[0,450,350,755],    f:'tile', chip:true},
+  {id:'bed3',   name:'Bed room 3',    dims:'350 × 300', r:[0,0,350,300],      f:'tile', chip:true},
   {id:'bald',   name:'Balcony',       dims:'130 × 290', r:[650,450,780,755],  f:'deck', chip:true, chipName:'Dining balcony'},
   {id:'balm',   name:'Balcony',       dims:'110 × 340', r:[780,0,890,340],    f:'deck', chip:true, chipName:'Master balcony', small:true},
-  {id:'pass',   name:'Passage',       dims:'310 × 150', r:[230,300,540,450],  f:'tile', small:true, noArea:true},
+  {id:'pass',   name:'Passage',       dims:'190 × 150', r:[350,300,540,450],  f:'tile', small:true, noArea:true},
+  {id:'b3d',    name:'Dressing',      dims:'120 × 150', r:[230,300,350,450],  f:'tile', small:true, noArea:true},
   {id:'t1',     name:'Toilet',        dims:'230 × 150', r:[0,300,230,450],    f:'wet', small:true},
   {id:'t2',     name:'Toilet',        dims:'230 × 150', r:[540,300,780,450],  f:'wet', small:true},
   {id:'t3',     name:'Toilet',        dims:'150 × 230', r:[0,755,160,985],    f:'wet', small:true},
@@ -125,13 +127,15 @@ const ROOMS = [
 // type: door | open | wide | slide | win | vent.  side = which side of the wall the door swings into.  kind 'p' = balcony railing
 const WALLS = [
   // outer walls
-  [0,0,780,0],
-  [0,0,0,1110,[[90,230,'win'],[340,410,'vent'],[560,700,'win'],[820,900,'vent'],[1010,1090,'win']]],
-  [0,1110,780,1110,[[30,130,'win'],[230,380,'win'],[470,600,'win'],[650,740,'door',{hinge:'s',side:-1,main:true,ang:78}]]],
+  [0,0,780,0,[[220,342,'win'],[420,525,'win']]],   // Bed 3 bay window, Master bed window
+  [0,0,0,1110,[[70,225,'bay'],[340,410,'vent'],[560,700,'win'],[820,900,'vent'],[1010,1090,'win']]],
+  [0,1110,780,1110,[[680,770,'door',{hinge:'e',side:-1,main:true,ang:78}]]],
   [780,0,780,450,[[60,240,'slide'],[340,410,'vent']]],
-  [780,755,780,1110],
+  [780,755,780,1110,[[810,1000,'win']]],   // living window on the south-facing wall
   // bedrooms / toilets / passage
-  [0,300,780,300,[[130,205,'door',{hinge:'s',side:-1}],[245,335,'door',{hinge:'e',side:1}],[365,455,'door',{hinge:'s',side:-1}],[560,635,'door',{hinge:'s',side:1}]]],
+  [0,300,230,300,[[130,205,'door',{hinge:'s',side:-1}]]],
+  [350,300,780,300,[[370,460,'door',{hinge:'s',side:-1}],[690,765,'door',{hinge:'e',side:1}]]],
+  [350,300,350,450,[[310,388,'door',{hinge:'e',side:-1}]]],   // Bed 3 door, from the passage into its dressing area
   [350,0,350,300],
   [230,300,230,450],
   [540,300,540,450],
@@ -139,10 +143,10 @@ const WALLS = [
   [540,450,780,450],
   [350,450,350,755,[[470,555,'door',{hinge:'e',side:-1}]]],
   // kitchen, toilet 3, work area
-  [0,755,450,755,[[360,445,'door',{hinge:'e',side:1}]]],
+  [0,755,450,755,[[360,457.5,'gap']]],   // open kitchen entry, no frame
   [160,755,160,1110,[[1005,1090,'open']]],
   [0,985,160,985,[[70,145,'door',{hinge:'e',side:-1}]]],
-  [450,755,450,1110],
+  [450,755,450,1110,[[747.5,872.5,'hatch']]],
   [650,755,780,755],
   // dining balcony
   [650,450,650,755,[[480,725,'slide']]],
@@ -296,8 +300,8 @@ const jalliTex = canvasTex((g,p)=>{
 jalliTex.encoding = THREE.LinearEncoding;
 
 const FLOOR = {
-  tile: {t:tileTex('#EAE5DC','#D1C9BC','#9E968A'), s:120, r:.32},
-  wet:  {t:tileTex('#B7BBBB','#9DA2A2','#6E7373'), s:60,  r:.6},
+  tile: {t:tileTex('#D5D6D6','#B8BABB','#8F9294'), s:120, r:.32},   // light gray floor tiles
+  wet:  {t:tileTex('#B9BCBE','#9EA2A5','#7C8083'), s:60,  r:.6},
   wood: {t:woodTex(['#C39565','#B8895A','#CB9F70','#B28152'],'#7E5634'), s:160, r:.6},
   deck: {t:woodTex(['#8E6340','#845A38','#97694A'],'#3F2717'), s:120, r:.85}
 };
@@ -526,6 +530,9 @@ WALLS.forEach(([x1,y1,x2,y2,ops,kind])=>{
     if(t==='wide'){ solid(s,e,240,WH); wide(s,e,240); }
     if(t==='slide'){ solid(s,e,222,WH); slider(s,e); }
     if(t==='win'){ solid(s,e,0,90); solid(s,e,212,WH); win(s,e,90,212,false); }
+    // 'gap' = plain full-height opening with no frame or wall above
+    if(t==='bay'){ solid(s,e,0,45); solid(s,e,215,WH); }   // bay window opening (projection built separately)
+    if(t==='hatch'){ solid(s,e,0,145); B(s-3,e+3,-T/2-3,T/2+3,142,145,MAT.sill); }   // cut from half height to the ceiling
     if(t==='vent'){ solid(s,e,0,170); solid(s,e,212,WH); win(s,e,170,212,true); }
     cur = e;
   });
@@ -634,21 +641,61 @@ function run(r,front,n){   // kitchen base cabinets
   for(let i=1;i<n;i++){ const p=A0+(A1-A0)*i/n; FB(r,front,p-0.4,p+0.4,0,0.3,12,84,MAT.gap); }
   FB(r,front,A0+1,A1-1,0,1.5,83,85,MAT.brass);
 }
-/* ---------- Bed room 3 (teal bed, headboard on the outer wall) ---------- */
-rbox(80,260,160,285,0,1.2,MAT.rug2,1);
-bed(140,7.5,0,160,200,{hb:'#CFC5B4',duvet:'#2F7F76',fold:'#EEE9DE',throwC:'#C99A3B',accent:'#E9E2D5',hbH:112});
-nightstand(12,48,11,51); nightstand(234,272,11,51);
-wardrobe([284,342.5,20,200],'x-',3,240,MAT.oak);
-drapes('z',7.5,90,230,1);
+/* ---------- Bed room 3: bunk bed (two single 90 x 200 berths) along the top wall, in the top-left corner ---------- */
+rbox(110,240,135,270,0,1.2,MAT.rug2,1);
+grp(8,57,Math.PI/2,()=>{ const X0=-50, X1=50, Z0=0, Z1=204, P=6, F=MAT.oak, H=176;   // local z runs along the wall, +x = wall side
+  [[X0,Z0],[X1-P,Z0],[X0,Z1-P],[X1-P,Z1-P]].forEach(([x,z])=>box(x,x+P,z,z+P,0,H,F));
+  [[20,32],[118,130]].forEach(([a,b])=>{ box(X0+P,X1-P,Z0,Z0+P,a,b,F); box(X0+P,X1-P,Z1-P,Z1,a,b,F);
+    box(X0,X0+P,Z0+P,Z1-P,a,b,F); box(X1-P,X1,Z0+P,Z1-P,a,b,F); });
+  box(X0+P,X1-P,Z0,Z0+2,32,H-4,MAT.walnut); box(X0+P,X1-P,Z1-2,Z1,32,100,MAT.walnut);
+  box(X0+P,X1-P,Z1-2,Z1,130,H-4,MAT.walnut);
+  const berth=(h,duv,pil)=>{ rbox(X0+P,X1-P,Z0+P,Z1-P,h,h+16,MAT.linen,5);
+    rbox(X0+P-1,X1-P+1,Z0+60,Z1-P+1,h+11,h+19,M(duv,{roughness:1}),4);
+    rbox(X0+18,X1-18,Z0+10,Z0+42,h+14,h+28,MAT.pillow,7).rotation.x=-0.25;
+    rbox(X0+28,X1-28,Z0+30,Z0+44,h+16,h+34,M(pil,{roughness:1}),6).rotation.x=-0.2; };
+  berth(32,'#2F7F76','#C99A3B'); berth(130,'#C99A3B','#2F7F76');
+  box(X1-P,X1,Z0+P,Z1-P,150,156,F);                                             // guard rail, wall side
+  box(X0,X0+P,Z0+P,Z1-62,150,156,F); box(X0,X0+P,Z1-68,Z1-62,130,H,F);           // guard rail, room side (gap for ladder)
+  [Z1-60,Z1-18].forEach(z=>box(X0-4,X0,z,z+4,0,160,F));                         // ladder at the foot
+  [28,56,84,112].forEach(h=>box(X0-4,X0,Z1-56,Z1-18,h,h+3,F));
+});
+// Bay window on the left (north) wall at the plan window position, with a window seat and book racks at both ends
+grp(0,147.5,Math.PI/2,()=>{ const X0=-77.5, X1=77.5, ZO=-62, ZW=-7.5, S=45, TOP=215, al=MAT.alu, cr=M('#EDE7DD',{roughness:.8}), W=MAT.walnut, RK=24;
+  box(X0-8,X1+8,ZO-2,ZW,-3,S,MAT.wall);                                        // seat base / bay floor
+  box(X0-8,X1+8,ZO-2,ZW,TOP,TOP+14,MAT.wall);                                  // bay roof
+  box(X0-8,X0,ZO,ZW,S,TOP,MAT.wall); box(X1,X1+8,ZO,ZW,S,TOP,MAT.wall);         // side cheeks
+  box(X0,X1,ZO,7.5,S-4,S,MAT.quartz);                                           // stone seat top
+  rbox(X0+RK+2,X1-RK-2,ZO+3,5,S,S+8,cr,3);                                      // seat cushion between the racks
+  rbox(X0+RK+5,X0+RK+35,ZO+6,ZO+18,S+8,S+38,MAT.teal,6).rotation.x=0.2;
+  rbox(X1-RK-35,X1-RK-5,ZO+6,ZO+18,S+8,S+38,MAT.mustard,6).rotation.x=0.2;
+  // glazing in the middle, between the racks
+  box(X0+RK,X1-RK,ZO-1,ZO+1,S+8,S+12,al); box(X0+RK,X1-RK,ZO-1,ZO+1,TOP-4,TOP,al);
+  [X0+RK,(X0+X1)/2-2,X1-RK-4].forEach(x=>box(x,x+4,ZO-1,ZO+1,S+8,TOP,al));
+  box(X0+RK+4,X1-RK-4,ZO-0.5,ZO+0.5,S+12,TOP-4,MAT.glass);
+  // book racks: open shelves filling both ends of the bay, full depth, seat to lintel
+  const bk=[MAT.teal,MAT.terracotta,MAT.mustard,MAT.sage,MAT.walnutDark,MAT.linen];
+  [[X0,X0+RK],[X1-RK,X1]].forEach(([a,b],side)=>{
+    box(a,b,ZO,ZO+1.5,S,TOP,W);                                                 // back
+    box(side?a:b-2,side?a+2:b,ZO,5,S,TOP,W);                                    // inner upright
+    [S,S+34,S+68,S+102,S+136,TOP-2].forEach(h=>box(a,b,ZO,5,h,h+2,W));           // shelves
+    [S+2,S+36,S+70,S+104,S+138].forEach((h,r)=>{ let z=ZO+4; for(let k=0;k<12 && z<-2;k++){ const w=3+((k*7+r*3+side)%4), t=20+((k*5+r+side)%9);
+      box(a+3,b-3,z,z+w,h,h+t,bk[(k+r+side)%bk.length]); z+=w+0.5; } });
+  });
+  // book cubbies in the seat face
+  box(X0+2,X1-2,4,7.5,4,S-6,W);
+  [X0+31,X0+61,X0+91].forEach(x=>box(x-1,x+1,6.5,7.6,4,S-6,MAT.walnutDark));
+  box(X0+6,X0+26,7.5,8,8,S-10,MAT.teal); box(X0+36,X0+56,7.5,8,8,S-12,MAT.terracotta); box(X0+66,X0+86,7.5,8,8,S-9,MAT.mustard); box(X0+96,X1-8,7.5,8,8,S-11,MAT.sage);
+});
+wardrobe([238,342.5,392,442.5],'z-',2,240,MAT.oak);   // Bed 3 dressing area
 
 /* ---------- Master bed (mauve bed, wardrobe on the Bed 3 wall) ---------- */
-rbox(470,690,150,285,0,1.2,MAT.rug1,1);
-box(470,680,7.5,9.5,0,265,MAT.walnutDark);                           // fluted panel behind the bed
-for(let xx=472; xx<678; xx+=7) box(xx,xx+4,9.5,11.5,0,265,MAT.walnut);
-bed(575,11.5,0,180,205,{hb:'#CDBFA8',duvet:'#9C7F8C',fold:'#F3EFE7',throwC:'#6E7550',accent:'#C99A3B'});
-nightstand(428,466,14,54); nightstand(684,722,14,54);
+rbox(450,670,150,285,0,1.2,MAT.rug1,1);
+box(530,660,7.5,9.5,0,265,MAT.walnutDark);                           // fluted panel behind the bed
+for(let xx=532; xx<657; xx+=7) box(xx,xx+4,9.5,11.5,0,265,MAT.walnut);
+bed(555,11.5,0,180,205,{hb:'#CDBFA8',duvet:'#9C7F8C',fold:'#F3EFE7',throwC:'#6E7550',accent:'#C99A3B'});
+nightstand(419,453,14,54); nightstand(657,693,14,54);
 wardrobe([357.5,417,20,190],'x+',3,240,MAT.oak);
-drapes('z',772.5,60,240,-1);
+drapes('z',772.5,60,240,-1); box(420,525,7.5,10,165,212,MAT.curtain);   // roman blind
 
 /* ---------- Bed room 2 (maroon bed, wardrobe on the dining wall) ---------- */
 rbox(70,250,610,745,0,1.2,MAT.rug3,1);
@@ -657,34 +704,193 @@ nightstand(22,58,461,499); nightstand(242,278,461,499);
 wardrobe([292,342.5,600,748],'x-',3,240,MAT.oak);
 drapes('z',7.5,560,700,1);
 
+/* ---------- Study tables in all bedrooms ---------- */
+function studyDesk(x0,x1,z0,z1){
+  rbox(x0,x1,z0,z1,72,76,MAT.oak,1);                                             // top
+  const i=3; [[x0+i,z0+i],[x1-i,z0+i],[x0+i,z1-i],[x1-i,z1-i]].forEach(([a,b])=>cyl(a,b,0,72,1.4,1.4,MAT.black,10));
+  const cx=(x0+x1)/2, cz=(z0+z1)/2, w=x1-x0, d=z1-z0;
+  if(w>=d){ box(cx-17,cx+17,cz-10,cz+12,76,77.5,MAT.black); box(cx-17,cx+17,cz-12,cz-10.5,77.5,98,MAT.black); }   // laptop (runs along x)
+  else    { box(cx-10,cx+12,cz-17,cz+17,76,77.5,MAT.black); box(cx-12,cx-10.5,cz-17,cz+17,77.5,98,MAT.black); }
+  const lx = w>=d ? x1-12 : cx, lz = w>=d ? cz : z0+12;                          // desk lamp
+  cyl(lx,lz,76,78,6,6,MAT.brass,16); cyl(lx,lz,78,112,0.8,0.8,MAT.brass,8); cyl(lx,lz,108,118,3,7,MAT.shade,20);
+}
+studyDesk(292.5,342.5,125,225); chair(268,175,'x+');       // Bed room 3: on the master-bed wall
+studyDesk(700,770,9.5,59.5); chair(735,84,'z-');           // Master bed: on the outer wall, beside the bed
+studyDesk(8,100,697.5,747.5);   chair(54,675,'z+');        // Bed room 2: bottom-left corner, below the window
+
 /* ---------- Toilets ---------- */
 // Toilet 1 (Bed 3): WC and basin on the far wall, shower on the outer side
 wcUnit(195,442.5,Math.PI,70); vanityUnit(122,442.5,Math.PI,60);
 box(86,88,335,442.5,0,200,MAT.glass); box(85.5,88.5,335,337.5,0,200,MAT.chrome); showerHead(45,0,442.5,-1);
 // Toilet 2 (Master)
-wcUnit(640,442.5,Math.PI,70); vanityUnit(547.5,405,Math.PI/2,60);
-box(688,690,335,442.5,0,200,MAT.glass); box(687.5,690.5,335,337.5,0,200,MAT.chrome); showerHead(731,0,442.5,-1);
+wcUnit(662,442.5,Math.PI,70); vanityUnit(737,442.5,Math.PI,58);
+box(610,612,335,442.5,0,200,MAT.glass); box(609.5,612.5,335,337.5,0,200,MAT.chrome); showerHead(576,0,442.5,-1);
 // Toilet 3 (common, entered from the work area)
 wcUnit(7.5,880,Math.PI/2,70); vanityUnit(80,762.5,0,55);
 
 /* ---------- Passage: wash basin counter on the toilet wall ---------- */
+// Wash area in the passage (near the dining): washing machine under a raised tiled shelf + lower vanity with vessel basin,
+// tall wood wall cabinet above the machine, mirror above the basin. Local frame: x along the wall (-x = bedroom side), z out from the wall.
+{ const mosTex = canvasTex((g,p)=>{ const n=16, t=p/n; g.fillStyle='#D9CDB9'; g.fillRect(0,0,p,p);
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++){ g.fillStyle=shade('#EFE6D7',(rnd()-.5)*10); g.fillRect(i*t+1,j*t+1,t-2,t-2); } },256);
+  const mosaic = M('#FFFFFF',{map:mosTex,roughness:.45});
+  const mosaicWall = M('#FFFFFF',{map:(()=>{ const t=mosTex.clone(); t.needsUpdate=true; t.repeat.set(3.4,1.4); return t; })(),roughness:.45});
+  const cream = M('#EDE4D6',{roughness:.45}), wood = M('#B48C66',{roughness:.55});
 grp(532.5,375,-Math.PI/2,()=>{
-  box(-37.5,37.5,0.5,38.5,45,82,MAT.walnutDark);
-  FB([-37.5,37.5,0.5,38.5],'z+',-0.4,0.4,0,0.3,47,80,MAT.gap);
-  box(-38.5,38.5,0,40.5,82,85,MAT.quartz);
-  rbox(-20,20,5.5,33.5,85,97,MAT.ceramic,8);
-  cyl(0,3.5,85,108,1.3,1.7,MAT.chrome,12); box(-1.2,1.2,3.5,12.5,105,107.5,MAT.chrome);
-  box(-30,30,0,1.5,112,182,MAT.mirror);
-  box(-30,30,0,2.5,185,188,MAT.led);
+  // --- washing machine bay (bedroom side) ---
+  box(-67,-6,2,58,0,85,MAT.ceramic);                                         // front-load machine 61 x 56 x 85
+  box(-67,-6,58,58.4,74,85,MAT.ceramic); box(-60,-44,58.4,59,77,82,MAT.black); box(-38,-30,58.4,59,77,82,MAT.steelDark);
+  { const dr=new THREE.Mesh(new THREE.CylinderGeometry(17,17,1.5,40),MAT.gap); dr.rotation.x=Math.PI/2; dr.position.set(-36.5,40,58.8); add(dr);
+    const rg=new THREE.Mesh(new THREE.TorusGeometry(18.5,2,10,40),MAT.chrome); rg.position.set(-36.5,40,59.2); add(rg); }
+  box(-67.5,-1.5,0,60,90,96,cream);                                          // raised tiled shelf over the machine
+  box(-67.5,-1.5,59,61,86,96,cream);                                         // shelf front lip
+  box(-5.5,-1.5,0,61,0,96,cream);                                            // tiled pier between machine and vanity
+  // towels and bits on the shelf
+  rbox(-62,-30,10,42,96,101,MAT.linen,2); rbox(-61,-31,11,41,101,106,MAT.linen,2); rbox(-60,-32,12,40,106,110,MAT.pillow,2);
+  box(-24,-17,12,19,96,103,MAT.ceramic); box(-14,-8,14,20,96,101,MAT.potWhite);
+  // --- vanity (dining side) ---
+  box(-1.5,67.5,0,60,0,8,cream);                                             // tiled plinth
+  box(-1.5,66,0,56,8,80,wood);                                               // wood drawer unit
+  box(-1.5,66,56,56.4,48.5,50,MAT.gap);                                      // drawer split
+  box(-1.5,67.5,0,61,80,86,cream);                                           // tiled counter top (lower than the shelf)
+  box(66,67.5,0,61,0,86,cream);                                              // end pier
+  cyl(34,32,86,88,8,9,MAT.ceramic,32); cyl(34,32,88,101,21,11,MAT.ceramic,40);   // vessel basin
+  cyl(34,32,99.5,100.5,19.5,19.5,MAT.gap,40);
+  cyl(34,8,86,116,1.2,1.5,MAT.chrome,12); box(32.8,35.2,8,20,113,115,MAT.chrome);  // tall mixer
+  cyl(8,12,86,100,3,3,MAT.ceramic,16); cyl(15,12,86,98,2.6,2.6,MAT.ceramic,16);   // soap bottles
+  cyl(58,14,86,96,3.5,4,MAT.glass,16); sph(58,104,14,6,MAT.leaf2);                 // small vase
+  // --- wall finishes ---
+  box(-67.5,67.5,0,0.8,86,140,mosaicWall);                                   // mosaic splash
+  box(-1.5,66,0,1.5,140,245,MAT.mirror);                                     // large mirror over the basin
+  box(4,8,1.5,5,175,215,MAT.led); box(56,60,1.5,5,175,215,MAT.led);         // two slim wall lights
+  box(-67.5,-1.5,0,36,140,WH,wood);                                          // tall wood wall cabinet over the machine
+  box(-34.8,-34.2,36,36.3,142,WH-2,MAT.gap);
 });
+}
 
 /* ---------- Dining (4-seater) ---------- */
-rbox(465,555,515,665,72,76,MAT.teak,1.5);
-box(470,474,522,658,0,72,MAT.black); box(546,550,522,658,0,72,MAT.black);
-box(474,546,588,592,8,11,MAT.black);
+{ // rectangular table 95 x 160 with rounded corners, on 4 tapered legs
+  const sh=rrShape(95,160,18);
+  const g=new THREE.ExtrudeGeometry(sh,{depth:3,bevelEnabled:true,bevelThickness:0.8,bevelSize:0.8,bevelSegments:3,curveSegments:12});
+  g.rotateX(-Math.PI/2);
+  const top=new THREE.Mesh(g,MAT.teak); top.position.set(510,72.2,590); top.castShadow=true; top.receiveShadow=true; add(top);
+  box(472,548,528,652,66,72,MAT.walnutDark);                                      // apron
+  [[472,528],[548,528],[472,652],[548,652]].forEach(([x,z])=>cyl(x,z,0,72,2.6,1.6,MAT.walnutDark,16));   // 4 tapered legs
+}
 chair(438,555,'x+'); chair(438,625,'x+'); chair(582,555,'x-'); chair(582,625,'x-');
 pendant(510,555,170,16); pendant(510,625,170,16);
 drapes('z',642.5,480,725,-1);
+
+/* ---------- Wood showcase partition between living and dining (balcony side), 50 cm wide ---------- */
+{ const X0=592.5, X1=642.5, Z0=740, Z1=770, W=MAT.walnut;
+  box(X0,X1,Z0,Z1,0,10,MAT.walnutDark);                              // plinth
+  box(X0,X0+4,Z0,Z1,0,WH,W); box(X1-4,X1,Z0,Z1,0,WH,W);              // side posts to the ceiling
+  box(X0,X1,Z0,Z1,WH-10,WH,W);                                       // top rail
+  box(X0+4,X1-4,Z0,Z1,10,80,MAT.teak);                               // closed base cabinet
+  [Z0,Z1].forEach((z,i)=>{ const d=i?1:-1; box(X0+4,X1-4,z+d*0.3-0.15,z+d*0.3+0.15,40,41,MAT.gap); box(X0+20,X1-20,z+d*1.2-0.6,z+d*1.2+0.6,58,60,MAT.brass); });
+  [80,125,170,215,WH-10].forEach(h=>box(X0+4,X1-4,Z0,Z1,h,h+2.5,W)); // open shelves, see-through
+  for(let x=X0+8; x<X1-6; x+=6) box(x,x+2.5,754,756,82.5,WH-10,MAT.teak);   // slim slats in the middle plane
+  // display pieces on both faces
+  cyl(606,747,82.5,104,5,3.5,MAT.ceramic); box(620,636,762,767,82.5,100,MAT.terracotta);
+  cyl(630,746,127.5,139,6,6,MAT.brass); box(598,612,761,767,127.5,151,MAT.teal); box(612,617,761,767,127.5,149,MAT.mustard);
+  cyl(617,764,172.5,195,4,6,MAT.potWhite); box(598,614,743,748,172.5,184,MAT.walnutDark);
+  cyl(605,764,217.5,232,6,5,MAT.pot); cyl(628,747,217.5,240,3,4.5,MAT.ceramic);
+  const l=new THREE.PointLight(0xffd9a8,.18,1.6,2); l.position.set(6.17,2.3,7.55); scene.add(l);
+}
+
+/* ---------- Textured painted feature wall: living side of the kitchen wall ---------- */
+{ const plasterCol = canvasTex((g,p)=>{ g.fillStyle='#B9A48E'; g.fillRect(0,0,p,p);
+    for(let k=0;k<900;k++){ const x=rnd()*p, y=rnd()*p, r=6+rnd()*26; g.globalAlpha=.05+rnd()*.07;
+      g.fillStyle = rnd()<.5 ? '#CDBAA4' : '#9F8A74'; g.beginPath(); g.ellipse(x,y,r,r*(.3+rnd()*.5),rnd()*Math.PI,0,Math.PI*2); g.fill(); }
+    g.globalAlpha=1; },512);
+  const plasterBump = canvasTex((g,p)=>{ g.fillStyle='#808080'; g.fillRect(0,0,p,p);
+    for(let k=0;k<1400;k++){ const x=rnd()*p, y=rnd()*p, r=3+rnd()*18; g.globalAlpha=.15+rnd()*.25;
+      g.fillStyle = rnd()<.5 ? '#FFFFFF' : '#000000'; g.beginPath(); g.ellipse(x,y,r,r*(.25+rnd()*.5),rnd()*Math.PI,0,Math.PI*2); g.fill(); }
+    g.globalAlpha=1; },512);
+  plasterBump.encoding = THREE.LinearEncoding;
+  const panel=(z0,z1,h0,h1)=>{ const w=z1-z0, h=h1-h0;
+    const c=plasterCol.clone(); c.needsUpdate=true; c.repeat.set(w/120,h/120);
+    const b=plasterBump.clone(); b.needsUpdate=true; b.repeat.set(w/120,h/120);
+    const m=M('#FFFFFF',{map:c, bumpMap:b, bumpScale:0.5, roughness:.95});
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m); mesh.rotation.y=Math.PI/2;
+    mesh.position.set(457.8,(h0+h1)/2,(z0+z1)/2); mesh.receiveShadow=true; root.add(mesh); };
+  panel(762.5,869.5,9,142);        // below the kitchen cut
+  panel(872.5,1102.5,9,WH);        // full-height part towards the pooja corner
+  box(457.5,458.2,869.5,872.5,9,142,MAT.skirt);   // neat edge at the cut
+}
+
+/* ---------- Wooden archway between living/kitchen and dining, from the Bed room 2 wall to the showcase partition ---------- */
+{ const aw = MAT.walnut, groove = MAT.walnutDark;   // same walnut as the showcase partition
+  const Z0=749, Z1=761, XL0=357.5, XL1=363.5, XR0=586.5, XR1=592.5, HB=276, R=38;   // slim: 6 cm posts, 12 cm deep, 14 cm beam
+  box(XL0,XL1,Z0,Z1,0,WH,aw);                                  // left post against the Bed room 2 wall, floor to ceiling
+  box(XR0,XR1,Z0,Z1,0,WH,aw);                                  // right post, clad against the partition
+  box(XL0,XR1,Z0,Z1,HB,WH,aw);                                 // header beam up to the ceiling
+  box(XL0,XR1,Z0-0.5,Z1+0.5,HB-1,HB,groove);                   // shadow line under the beam
+  // curved corner brackets (quarter-circle cut), extruded through the full 30 cm depth
+  const sh = new THREE.Shape(); sh.moveTo(0,0); sh.lineTo(R,0); sh.absarc(R,-R,R,Math.PI/2,Math.PI,false); sh.lineTo(0,0);
+  const g = new THREE.ExtrudeGeometry(sh,{depth:Z1-Z0, bevelEnabled:false, curveSegments:24});
+  const mk=(x,flip)=>{ const m=new THREE.Mesh(g,aw); m.position.set(x,HB,Z0); if(flip){ m.scale.x=-1; } m.castShadow=true; m.receiveShadow=true; root.add(m); };
+  mk(XL1,false); mk(XR0,true);
+}
+
+/* ---------- Pendant lights over the breakfast counter in the kitchen–living cut ---------- */
+[788,847].forEach(z=>{
+  pendant(450,z,212,13);                                                       // same black cone pendant as over the dining table
+  const l=new THREE.PointLight(0xffd6a0,.22,2.4,2); l.position.set(4.5,2.05,z/100); scene.add(l);
+});
+
+/* ---------- Crockery unit on the dining wall (toilet wall, between the wash area and the balcony door) ---------- */
+{ const X0=546, X1=626, ZW=457.5, W=MAT.walnut;
+  // base cabinet 80 x 40 x 85 with two doors
+  box(X0+2,X1-2,ZW,ZW+38,0,10,MAT.gap);
+  box(X0,X1,ZW,ZW+40,10,82,W);
+  FB([X0,X1,ZW,ZW+40],'z+',(X0+X1)/2-0.4,(X0+X1)/2+0.4,0,0.3,12,80,MAT.gap);
+  [(X0+X1)/2-6,(X0+X1)/2+4].forEach(x=>FB([X0,X1,ZW,ZW+40],'z+',x,x+2,0,2.5,62,76,MAT.brass));
+  box(X0-1,X1+1,ZW,ZW+42,82,86,MAT.quartz);                                         // stone top
+  // upper glass display, 30 deep, 115 to 225
+  const U0=115, U1=225, D=30;
+  box(X0,X0+2,ZW,ZW+D,U0,U1,W); box(X1-2,X1,ZW,ZW+D,U0,U1,W);
+  box(X0,X1,ZW,ZW+D,U0,U0+2,W); box(X0,X1,ZW,ZW+D,U1-2,U1,W);
+  box(X0+2,X1-2,ZW,ZW+0.6,U0+2,U1-2,MAT.walnutDark);                                 // back panel
+  [152,189].forEach(h=>box(X0+2,X1-2,ZW,ZW+D-2,h,h+1.2,MAT.glass));                    // glass shelves
+  box(X0+2,X1-2,ZW+D-3,ZW+D-2,U1-4,U1-3,MAT.led);                                     // light strip
+  box(X0+2,(X0+X1)/2-0.3,ZW+D,ZW+D+0.6,U0+2,U1-2,MAT.glass); box((X0+X1)/2+0.3,X1-2,ZW+D,ZW+D+0.6,U0+2,U1-2,MAT.glass);   // glass doors
+  box(X0+2,X1-2,ZW+D,ZW+D+0.7,U0+2,U0+3.5,W); box((X0+X1)/2-0.3,(X0+X1)/2+0.3,ZW+D,ZW+D+0.8,U0+2,U1-2,W);
+  // crockery: plates standing, cup rows, bowls, glasses
+  const plates=(x,h)=>{ for(let k=0;k<5;k++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(11,11,0.8,28),MAT.ceramic); m.rotation.x=Math.PI/2-0.15; m.position.set(x+k*1.6,h+11.5,ZW+8+k*0.2); add(m);} };
+  plates(X0+8,U0+2); plates(X0+44,U0+2);
+  for(let k=0;k<5;k++){ cyl(X0+10+k*14,ZW+18,153.2,161,3.8,3.2,MAT.ceramic,16); }    // cups
+  for(let k=0;k<4;k++){ cyl(X0+12+k*18,ZW+15,190.2,196,7,4.5,k%2?MAT.teal:MAT.ceramic,20); }   // bowls
+  for(let k=0;k<5;k++){ cyl(X0+12+k*14,ZW+18,U0+2,U0+2.1,0.1,0.1,MAT.ceramic,4); }
+  cyl(X0+60,ZW+20,86,112,5,3,MAT.potWhite,20); box(X0+10,X0+30,ZW+6,ZW+18,86,88,MAT.walnutDark);   // jug + tray on the top
+  const l=new THREE.PointLight(0xffe0b0,.12,1.4,2); l.position.set((X0+X1)/200,2.1,(ZW+20)/100); scene.add(l);
+}
+
+/* ---------- Crockery unit in the dining, on the wall shared with the master toilet ---------- */
+{ const X0=548, X1=632, ZW=457.5, W=MAT.walnut, mid=(X0+X1)/2;
+  // base cabinet 84 x 40 x 86 with two doors
+  box(X0+2,X1-2,ZW,ZW+38,0,10,MAT.gap);
+  box(X0,X1,ZW,ZW+40,10,82,W);
+  FB([X0,X1,ZW,ZW+40],'z+',mid-0.4,mid+0.4,0,0.3,12,80,MAT.gap);
+  [mid-6,mid+4].forEach(x=>FB([X0,X1,ZW,ZW+40],'z+',x,x+2,0,2.5,62,76,MAT.brass));
+  box(X0-1,X1+1,ZW,ZW+42,82,86,MAT.quartz);                                         // stone top
+  // upper glass display cabinet, 30 deep, 115 to 225 cm
+  const U0=115, U1=225, D=30;
+  box(X0,X0+2,ZW,ZW+D,U0,U1,W); box(X1-2,X1,ZW,ZW+D,U0,U1,W);
+  box(X0,X1,ZW,ZW+D,U0,U0+2,W); box(X0,X1,ZW,ZW+D,U1-2,U1,W);
+  box(X0+2,X1-2,ZW,ZW+0.6,U0+2,U1-2,MAT.walnutDark);                                 // back panel
+  [152,189].forEach(h=>box(X0+2,X1-2,ZW,ZW+D-2,h,h+1.2,MAT.glass));                    // glass shelves
+  box(X0+2,X1-2,ZW+D-3,ZW+D-2,U1-4,U1-3,MAT.led);                                     // light strip
+  box(X0+2,mid-0.3,ZW+D,ZW+D+0.6,U0+2,U1-2,MAT.glass); box(mid+0.3,X1-2,ZW+D,ZW+D+0.6,U0+2,U1-2,MAT.glass);   // glass doors
+  box(mid-0.3,mid+0.3,ZW+D,ZW+D+0.8,U0+2,U1-2,W);
+  // crockery: standing plates, cups, bowls
+  const plates=x=>{ for(let k=0;k<5;k++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(11,11,0.8,28),MAT.ceramic); m.rotation.x=Math.PI/2-0.15; m.position.set(x+k*1.6,U0+13.5,ZW+8+k*0.2); add(m);} };
+  plates(X0+10); plates(X0+48);
+  for(let k=0;k<5;k++) cyl(X0+12+k*15,ZW+18,153.2,161,3.8,3.2,MAT.ceramic,16);      // cups
+  for(let k=0;k<4;k++) cyl(X0+14+k*19,ZW+15,190.2,196,7,4.5,k%2?MAT.teal:MAT.ceramic,20);   // bowls
+  cyl(X0+64,ZW+20,86,112,5,3,MAT.potWhite,20); box(X0+10,X0+32,ZW+6,ZW+18,86,88,MAT.walnutDark);   // jug + tray
+  const l=new THREE.PointLight(0xffe0b0,.12,1.4,2); l.position.set(mid/100,2.1,(ZW+20)/100); scene.add(l);
+}
 
 /* ---------- Kitchen (L counter, fridge on the living wall) ---------- */
 run([168,355,763,823],'z+',3); box(167.5,355,762.5,825,86,90,MAT.quartz);
@@ -697,9 +903,9 @@ box(255,325,770,815,90,91,MAT.black);                                           
 [[272,782],[308,782],[272,803],[308,803]].forEach(([x,z])=>cyl(x,z,91,92,5,5,MAT.steelDark,16));
 box(180,220,840,905,88.5,90.2,MAT.steelDark);                                         // sink
 cyl(172,872,90,122,1.5,1.9,MAT.chrome,12); box(172,190,870,874,118,121,MAT.chrome);
-box(380,442,890,955,0,186,MAT.steel);                                                 // fridge
-FB([380,442,890,955],'x-',891,954,0,0.3,120,121,MAT.gap);
-FB([380,442,890,955],'x-',948,951,0.3,3,125,172,MAT.chrome); FB([380,442,890,955],'x-',948,951,0.3,3,62,112,MAT.chrome);
+box(380,442,960,1025,0,186,MAT.steel);                                                 // fridge
+FB([380,442,960,1025],'x-',961,1024,0,0.3,120,121,MAT.gap);
+FB([380,442,960,1025],'x-',1018,1021,0.3,3,125,172,MAT.chrome); FB([380,442,960,1025],'x-',1018,1021,0.3,3,62,112,MAT.chrome);
 
 /* ---------- Work area ---------- */
 box(12,68,1045,1102,0,85,MAT.ceramic);
@@ -708,7 +914,7 @@ box(14,66,1043.8,1045,72,82,MAT.ledge);
 box(95,150,1060,1102,0,85,MAT.sage); box(94,151,1058,1102.5,85,88,MAT.quartz);
 
 /* ---------- Living ---------- */
-rbox(535,700,835,1000,0,1.2,MAT.rug1,1);
+rbox(545,700,875,1035,0,1.2,MAT.rug1,1);
 function sofaWood(x,z,rot,W,n){ n=n||3; grp(x,z,rot,()=>{
   const h=W/2, A=6, sw=(W-2*A)/n, wd=MAT.teak;
   [-1,1].forEach(f=>{
@@ -746,23 +952,92 @@ function armchair(x,z,rot){ grp(x,z,rot,()=>{   // matches the wooden-frame sofa
   rbox(-15,15,-20,-8,52,76,MAT.mustard,6).rotation.x = -0.2;           // accent pillow
 });}
 
-sofaWood(503.5,900,Math.PI/2,200,3);                  // 3-seater on the kitchen wall, facing the TV
-armchair(545,1060,Math.PI); armchair(617,1060,Math.PI); // two single seaters on the front wall
-cyl(615,915,38,42,34,34,MAT.quartz,40); cyl(615,915,3,38,5,5,MAT.black,16); cyl(615,915,0,3,20,20,MAT.black,32);
-// TV wall on the outer wall
-box(770,772.5,830,1010,0,262,MAT.walnutDark);
-for(let zz=832; zz<1007; zz+=6) box(768,770,zz,zz+3.5,0,262,MAT.walnut);
-box(767,768,830,1010,262,264,MAT.led);
-rbox(732,768,850,990,22,56,MAT.oak,1.5);
-[897,943].forEach(zz=>box(731.6,732,zz-0.4,zz+0.4,24,54,MAT.gap));
-box(764.5,767.5,860,980,95,164,MAT.black); box(764.2,764.5,862,978,97,162,MAT.screen);
-cyl(750,870,56,80,6,4,MAT.ceramic); box(742,758,960,976,56,70,MAT.terracotta);
-plant(752,782,true); plant(482,782);
+// 3-seater facing the TV + pooja wall (front wall)
+// One-piece L-shaped sofa in the corner: long side along the window wall (3 seats incl. corner), short side facing the TV (2 seats)
+{ const XB=772.5, ZB=770, D=88, BK=18, AR=14, XF=XB-D, ZF=ZB+D, ZE=1000, XE=560;
+  const sd=MAT.sofaDark, so=MAT.sofa;
+  box(XF+4,XB-2,ZB+2,ZE-4,0,10,MAT.teak); box(XE+4,XF+4,ZB+2,ZF-4,0,10,MAT.teak);        // wooden plinth
+  rbox(XF,XB,ZB,ZE,10,40,sd,3); rbox(XE,XF+2,ZB,ZF,10,40,sd,3);                           // upholstered base
+  rbox(XB-BK,XB,ZB,ZE,36,86,so,6); rbox(XE,XB-BK+2,ZB,ZB+BK,36,86,so,6);                  // continuous backrest
+  rbox(XF,XB-BK+2,ZE-AR,ZE,36,62,so,5); rbox(XE,XE+AR,ZB+BK-2,ZF,36,62,so,5);             // end arms
+  const seatX=[XF+1,XB-BK-1], zs=[ZB+BK, 858, 922, ZE-AR];
+  for(let i=0;i<3;i++){ rbox(seatX[0],seatX[1],zs[i]+0.6,zs[i+1]-0.6,40,52,so,6);
+    rbox(XB-BK-17,XB-BK+1,zs[i]+1.5,zs[i+1]-1.5,50,84,so,7).rotation.z = 0.12; }         // seats + back cushions (window side)
+  const xs=[XE+AR, 629, XF];
+  for(let i=0;i<2;i++){ rbox(xs[i]+0.6,xs[i+1]-0.6,ZB+BK+1,ZF-1,40,52,so,6);
+    rbox(xs[i]+1.5,xs[i+1]-1.5,ZB+BK-1,ZB+BK+17,50,84,so,7).rotation.x = -0.12; }         // seats + back cushions (TV side)
+  rbox(XB-BK-15,XB-BK-1,800,838,51,82,MAT.teal,6);                                        // accent cushions
+  rbox(XB-BK-15,XB-BK-1,942,980,51,82,MAT.terracotta,6);
+  rbox(585,623,ZB+BK+1,ZB+BK+15,51,82,MAT.mustard,6);
+}
+box(770,772.5,815,995,165,212,MAT.curtain);   // roman blind    // single seaters on the side walls
+cyl(622,930,38,42,32,32,MAT.quartz,40); cyl(622,930,3,38,5,5,MAT.black,16); cyl(622,930,0,3,20,20,MAT.black,32);
+// Pooja unit in the corner by the kitchen wall
+grp(519.5,750.5,-Math.PI/2,()=>{ const z0=0, z1=62, X=352, pz1=62;
+  box(X-30,X,z0,z1,10,75,MAT.oak); box(X-28,X,z0+2,z1-2,0,10,MAT.gap);          // floating low cabinet
+  const r=[X-30,X,z0,z1];
+  [31].forEach(z=>FB(r,'x-',z-6,z+6,0,2,68,70,MAT.brass));
+  box(X-31,X,z0-1,z1+1,75,78,MAT.walnut);                                        // cabinet top
+
+  // --- pooja niche (62 wide) ---
+  const P=97, TOP=190, zc=(z0+pz1)/2;
+  box(X-30,X,z0,z0+3,78,TOP+18,MAT.teak); box(X-30,X,pz1-3,pz1,78,TOP+18,MAT.teak);   // side panels
+  box(X-30,X,z0+3,pz1-3,78,81,MAT.teak);                                         // sill for diya / agarbatti
+  box(X-30,X,z0+3,pz1-3,P-3,P,MAT.teak); box(X-31,X-30,z0+3,pz1-3,P-2.5,P-0.5,MAT.brass);
+  box(X-1.5,X,z0+3,pz1-3,P,TOP,MAT.shade);                                       // warm back glow
+  jalli(false,X-6,z0+3,pz1-3,P,TOP,'#C9A45C');                                   // brass-tone jaali
+  box(X-18,X-10,zc-12,zc+12,P,P+9,MAT.teak);                                     // deity step
+  box(X-30,X,z0+3,pz1-3,TOP,TOP+18,MAT.teak);                                    // canopy
+  box(X-31.5,X-30,z0,pz1,TOP+3,TOP+5,MAT.brass); box(X-31.5,X-30,z0,pz1,TOP+14,TOP+16,MAT.brass);
+  cyl(X-22,zc,TOP-10,TOP,0.3,0.3,MAT.brass,6); cyl(X-22,zc,TOP-20,TOP-10,1.6,5,MAT.brass,20);   // bell
+  [z0+10,pz1-10].forEach(z=>{                                                    // two small nilavilakku
+    cyl(X-20,z,P,P+2,4,4,MAT.brass); cyl(X-20,z,P+2,P+18,0.8,1.3,MAT.brass,12);
+    cyl(X-20,z,P+18,P+20,3.8,1.8,MAT.brass); cyl(X-20,z,P+20,P+26,0.5,1,MAT.brass,8); sph(X-20,P+22,z,1.1,MAT.bulb);
+  });
+  cyl(X-18,z0+18,81,83,3.5,3.5,MAT.brass); cyl(X-18,pz1-18,81,89,1.1,1.1,MAT.brass,8);   // diya + agarbatti stand
+});
+{ const pl = new THREE.PointLight(0xffc27a,.35,2.2,2); pl.position.set(4.885,1.4,10.8); scene.add(pl); }
+// TV unit on the front wall, next to the pooja
+box(530,668,1100,1102.5,0,262,MAT.walnutDark);
+for(let xx=532; xx<665; xx+=6) box(xx,xx+3.5,1098,1100,0,262,MAT.walnut);
+box(530,668,1097,1098,262,264,MAT.led);
+rbox(540,658,1062,1097,22,56,MAT.oak,1.5);
+[579,619].forEach(xx=>box(xx-0.4,xx+0.4,1061.6,1062,24,54,MAT.gap));
+box(537,661,1093.5,1096.5,95,164,MAT.black); box(539,659,1093.2,1093.5,97,162,MAT.screen);
+cyl(648,1080,56,80,6,4,MAT.ceramic);
 
 /* ---------- Balconies ---------- */
 lounge(715,510,0); lounge(715,695,Math.PI); cyl(715,602,0,46,20,20,MAT.teak,32);
-plant(755,470); plant(755,735,true);
+plant(755,470); plant(752,705,true);
 lounge(842,170,-Math.PI/2); plant(862,30,true); plant(862,310);
+
+/* ---------- Roof slab + false ceiling (toggle with the "Ceiling" button) ---------- */
+const roofG = new THREE.Group(); roofG.visible = false; root.add(roofG);
+curParent = roofG;
+{ const slab = M('#F4F2EE',{roughness:.95, side:THREE.DoubleSide}), gyp = M('#FBFAF7',{roughness:.9});
+  box(-7.5,787.5,-7.5,1117.5,WH,WH+14,slab);                 // RCC roof slab over the flat
+  box(787.5,895,-5,345,WH,WH+14,slab);                       // over the master balcony
+  // false ceiling: 55 cm perimeter band dropped to 276 cm (flush with the arch beam), raised centre with a hidden LED cove + downlights
+  const fc = (x0,x1,z0,z1)=>{ const B=55, H0=276, ix0=x0+B, ix1=x1-B, iz0=z0+B, iz1=z1-B;
+    box(x0,x1,z0,iz0,H0,WH,gyp); box(x0,x1,iz1,z1,H0,WH,gyp);
+    box(x0,ix0,iz0,iz1,H0,WH,gyp); box(ix1,x1,iz0,iz1,H0,WH,gyp);
+    // cove lip + LED strip along the inner edge
+    box(ix0-4,ix1+4,iz0-4,iz0,H0-2,H0+6,gyp); box(ix0-4,ix1+4,iz1,iz1+4,H0-2,H0+6,gyp);
+    box(ix0-4,ix0,iz0,iz1,H0-2,H0+6,gyp); box(ix1,ix1+4,iz0,iz1,H0-2,H0+6,gyp);
+    box(ix0,ix1,iz0,iz0+1.2,H0+6,H0+10,MAT.led); box(ix0,ix1,iz1-1.2,iz1,H0+6,H0+10,MAT.led);
+    box(ix0,ix0+1.2,iz0,iz1,H0+6,H0+10,MAT.led); box(ix1-1.2,ix1,iz0,iz1,H0+6,H0+10,MAT.led);
+    box(ix0+2,ix1-2,iz0+2,iz1-2,WH-1,WH,M('#FFF6E6',{emissive:'#FFE3B8',emissiveIntensity:.25,roughness:1}));   // soft glow in the recess
+    // downlights in the band
+    const dl=(x,z)=>cyl(x,z,H0-0.6,H0,4.5,4.5,MAT.bulb,20);
+    for(let x=x0+60; x<=x1-40; x+=90){ dl(x,z0+27); dl(x,z1-27); }
+    for(let z=iz0+40; z<=iz1-20; z+=90){ dl(x0+27,z); dl(x1-27,z); }
+    const l=new THREE.PointLight(0xffe0b0,.35,4,2); l.position.set((x0+x1)/200,2.55,(z0+z1)/200); roofG.add(l);
+  };
+  fc(357.5,642.5,457.5,749);      // dining - stops at the arch
+  fc(457.5,772.5,761,1102.5);     // living - starts after the arch
+}
+curParent = null;
+roofG.traverse(o=>{ if(o.isMesh){ o.castShadow = false; } });
 
 /* ---------- Room labels ---------- */
 const labels = [];
@@ -813,6 +1088,7 @@ function markChip(id){ chipsEl.querySelectorAll('.chip').forEach(c=>c.setAttribu
 function syncLabels(){ labels.forEach(s=>s.visible = state.labels && state.mode!=='walk'); }
 
 $('#t-labels').addEventListener('click',e=>{ state.labels=!state.labels; e.currentTarget.setAttribute('aria-pressed',state.labels); syncLabels(); });
+$('#t-roof').addEventListener('click',e=>{ roofG.visible=!roofG.visible; e.currentTarget.setAttribute('aria-pressed',roofG.visible); renderer.shadowMap.needsUpdate = true; });
 $('#t-half').addEventListener('click',e=>{ state.half=!state.half; e.currentTarget.setAttribute('aria-pressed',state.half); clip.constant = state.half ? 1.15 : 100; renderer.shadowMap.needsUpdate = true; });
 ['overview','top','walk'].forEach(m=>$('#m-'+m).addEventListener('click',()=>setMode(m)));
 
